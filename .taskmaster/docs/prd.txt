@@ -1,0 +1,92 @@
+# Product Requirements Document: Automated Dashboard Testing Suite
+
+**Author:** Roo, Technical Leader
+**Date:** June 28, 2025
+**Status:** Proposed
+
+---
+
+### 1. Introduction & Objective
+
+This document outlines the requirements for an automated testing suite for the `dashboard_generator.py` script. The script dynamically generates an HTML and JavaScript-based financial dashboard. Due to the generative nature of the output, it is critical to have an automated way to verify its functional integrity.
+
+The primary objective of this project is to build a reliable, automated process that:
+1.  Runs the dashboard generator.
+2.  Launches the generated dashboard in a real browser.
+3.  Performs checks to ensure the dashboard is free of critical errors, such as broken JavaScript and invalid links.
+
+This will provide confidence that changes to the generator or its inputs do not negatively impact the end-user experience.
+
+### 2. User Personas
+
+| Persona | Description | Needs & Goals |
+| :--- | :--- | :--- |
+| **Developer / Maintainer** | The software engineer responsible for maintaining and extending the `analyst_dashboard` project. | Needs a fast and reliable way to confirm that their code changes have not broken the dashboard's functionality. Wants to catch regressions automatically without tedious manual testing. |
+
+### 3. Functional Requirements
+
+| ID | Requirement | User Story | Acceptance Criteria |
+| :--- | :--- | :--- | :--- |
+| **FR-1** | **Execute Dashboard Generator** | As a developer, I want the test suite to automatically run the `DashboardGenerator`... | - The test suite must successfully invoke the `generate_dashboard()` method.<br>- The `dashboard.html` and `dashboard.js` files must be created in a designated output directory. |
+| **FR-2** | **Serve Generated Files** | ...so that the generated files can be loaded in a browser under realistic conditions. | - The test suite must start a local HTTP server to serve the directory containing the generated files.<br>- The `dashboard.html` file must be accessible via a local URL (e.g., `http://localhost:8000/dashboard.html`). |
+| **FR-3** | **Launch Browser** | As a developer, I want the test suite to launch a real browser... | - The test suite must use a browser automation tool (Playwright) to open a new browser window.<br>- The browser must successfully navigate to the URL of the locally served `dashboard.html`. |
+| **FR-4** | **Check for Console Errors** | ...so that I can be sure the dashboard's JavaScript executes without errors. | - The test must fail if any uncaught JavaScript errors are logged to the browser's developer console.<br>- The test must pass if the console remains clean. |
+| **FR-5** | **Verify Content Rendering** | As a developer, I want to verify that the dashboard has rendered basic content... | - The test must assert that the HTML `<body>` is not empty.<br>- The test must assert that the page's `<title>` has been set. |
+| **FR-6** | **Validate Hyperlinks** | ...so that I can ensure all links on the page are valid and functional. | - The test must find all `<a>` elements on the rendered page.<br>- The test must fail if any `<a>` element has an empty, missing, or placeholder (`#`) `href` attribute. |
+
+### 4. Technical Requirements & Workflow
+
+The testing suite will be built using Python and integrated into the existing project structure.
+
+**4.1. Technology Stack**
+*   **Testing Framework:** `pytest`
+*   **Asynchronous Test Handling:** `pytest-asyncio`
+*   **Browser Automation:** `Playwright`
+*   **Dependency Management:** A `requirements-test.txt` file will be created to manage testing-specific dependencies.
+
+**4.2. Testing Workflow**
+
+The automated test will follow this sequence:
+
+```mermaid
+sequenceDiagram
+    participant Test Runner (pytest)
+    participant DashboardGenerator
+    participant Local Web Server
+    participant Browser (Playwright)
+
+    Test Runner (pytest)->>+DashboardGenerator: 1. Run generate_dashboard()
+    DashboardGenerator-->>-Test Runner (pytest): Returns path to generated files
+
+    Test Runner (pytest)->>+Local Web Server: 2. Start server for generated files
+    Local Web Server-->>-Test Runner (pytest): Server running at http://localhost:8000
+
+    Test Runner (pytest)->>+Browser (Playwright): 3. Launch browser
+    Browser (Playwright)->>-Test Runner (pytest): Browser is ready
+
+    Test Runner (pytest)->>Browser (Playwright): 4. Navigate to http://localhost:8000/dashboard.html
+    Browser (Playwright)->>Local Web Server: Request dashboard.html
+    Local Web Server-->>Browser (Playwright): Serve dashboard.html & dashboard.js
+    Browser (Playwright)->>Test Runner (pytest): Page loaded
+
+    Test Runner (pytest)->>Browser (Playwright): 5. Perform Checks & Assertions
+    Note right of Browser (Playwright): - Check for console errors<br/>- Verify page content<br/>- Find all `<a>` tags<br/>- Validate `href` attributes
+
+    Test Runner (pytest)->>+Local Web Server: 6. Stop server
+    Test Runner (pytest)->>+Browser (Playwright): 7. Close browser
+```
+
+### 5. Success Metrics
+
+*   The entire test suite runs to completion automatically via a single command (e.g., `pytest`).
+*   The suite accurately reports a "pass" when the generated dashboard is free of console errors and has valid links.
+*   The suite accurately reports a "fail" when a regression is introduced (e.g., a change that causes a JavaScript error).
+
+### 6. Out of Scope
+
+The following items are explicitly out of scope for this initial version:
+
+*   **Visual Regression Testing:** Comparing screenshots to detect changes in the UI's appearance.
+*   **Performance Testing:** Measuring page load times or rendering performance.
+*   **Cross-Browser Testing:** While Playwright supports multiple browsers, the initial implementation will focus on a single browser (Chromium) for simplicity.
+*   **User Acceptance Testing (UAT):** This suite focuses on technical and functional correctness, not subjective user experience.
